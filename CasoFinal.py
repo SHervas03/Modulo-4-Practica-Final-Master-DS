@@ -4,124 +4,245 @@
 
 # ### Librerías
 
-# Tratamiento de datos
-# ==============================================================================
-import numpy as np
 import pandas as pd
-
+import numpy as np
+import seaborn as sns
 import matplotlib.pyplot as plt
-
-# Preprocesado
-# ==============================================================================
 from sklearn.impute import KNNImputer
-
-import missingno as msno # librería para tratamiento de datos perdidos
-
-# ### Carga de datos
-
-def read_csv(file, sep):
-    # Declaración de una variable, la que se encargara de guardar nuestros registros
-    df = []
-    try:
-        # Lectura de nuestro fichero
-        df = pd.read_csv(file, sep=sep)
-    except FileNotFoundError:
-        # Excepción en caso de no ser el archivo encontrado por la ruta ofrecida
-        raise ValueError('Archivo no encontrado')
-    except Exception as e:
-        # Excepción genérica en caso de que haya otro problema
-        raise ValueError(f'Error: {e}')
-    finally:
-        print('Proceso de lectura finalizado')
-    return df
-
-# ### Descripción y Análisis
-
-def description_and_analysis(df):
-    print(f'\nDescripción de la tabla de la tabla:\n {df.describe()}')
-    print('\nInformación de la tabla de la tabla:\n ')
-    print(f'{df.info()}')
-    msno.matrix(df)
-    plt.title('Valores faltantes en cada columna')
+from sklearn.neighbors import LocalOutlierFactor
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.neural_network import MLPClassifier
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, classification_report, precision_score, recall_score
+from sklearn.cluster import KMeans
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import GridSearchCV
+import missingno as msno
+from sklearn.datasets import make_blobs
+from sklearn.metrics import roc_curve
 
 
-# ### Tratamiento de nulos mediante imputación
+# ## 1. EDA
 
-def null_value_treatment(df):
-    # https://cesarquezadab.com/2021/09/19/guia-sobre-tecnicas-de-imputacion-de-datos-con-python/
-    # Documentación vista en clase (Clasificación_Titanic.ipynb)
-    imputer = KNNImputer(n_neighbors=5)
-    df = pd.DataFrame(imputer.fit_transform(df), columns=df.columns)
+# ### 1.1. Carga de datos
 
-# ### Outliers
+# Declaración de una variable, la que se encargara de guardar nuestros registros
+df = []
+file = './caso_final_small_20k_con_mes.csv'
+df = pd.read_csv(file, sep=',')
+df
 
+# ### 1.2. Descripción y Análisis
 
+df.info()
 
-# ## Analisis exploratorio
-
-# ### Conteo de Nulos
-
-def count_off_nulls(df):
-    print('\nConteo de nulos por columnas:')
-    # Variable que nos servira para verificar si hay o no valores nulos
-    null_validator = True
-    # Bucle donde se recorren las columnas una a una
-    for column in df.columns:
-        null_count = df[column].isnull().sum()
-        # Si existen nulos, imprimir el resultaso de la columna con nulos
-        if null_count != 0:
-            null_validator = False
-            print(f' - {column} | tiene {null_count} nulos')
-    # Comprobador de valores nulos final
-    if not null_validator:
-        print('\nHay valores nulos en el DataFrame')
-        null_validator = True
-    else:
-        print(' - No hay nulos en el DataFrame')
-
-# ### Reemplazo de nulos por 0:
-# Tras la exploración de los datos con los que vamos a trabajar, al ser de tipo numérico, se opta por el reemplazo de estos por un valor numérico, de tal manera que no se borre ningún dato, pero que a su vez no cuente para el análisis
-
-def replace_null_with_zero(df):
-    print('\nReemplazo de NULL´s por 0')
-    # Reemplazo de valores nulos por 0
-    df.fillna(0, inplace=True)
-
-# ### Resumen estadístico de variables
-
-def variable_summary(df):
-    print(df.describe())
-
-# ### Transformación de datos de float a date
+# Observaciones:
 # 
-# Tras la visualización de los datos, se opta por un parseo de la columna 'MES' a date para un mejor tratamiento de datos
-
-def parse_column_year(df):
-    df['MES'] = df['MES'].astype(str)
-    df['MES'] = pd.to_datetime(df['MES'], format='%Y%m')
-    return df
-
-if __name__ == "__main__":
-    df = read_csv(file = './caso_final_small_20k_con_mes.csv', sep = ',')
-    description_and_analysis(df)
-    null_value_treatment(df)
-    # count_off_nulls(df)
-    # replace_null_with_zero(df)
-    # count_off_nulls(df)
-    # df = parse_column_year(df)
-    # column_type_display(df)
-    # variable_summary(df)
-
-
-# # Bibliografía
+# - Columnas con valores nulos
+# - Diferentes tipos de datos (float64, int64)
 # 
-# ### column_parsing:
+
+df.describe()
+
+msno.matrix(df)
+
+# Observaciones:
 # 
-#  - [Float Python](https://ellibrodepython.com/float-python)
+# Mostramos una matriz de calor para visualizar las variables con mayor preencia de valores perdidos, donde las lineas blancas indican los valores faltantes en cada columna.
+# 
+# Referencias:
+# 
+#  - [guia-sobre-tecnicas-de-imputacion-de-datos-con-python](https://cesarquezadab.com/2021/09/19/guia-sobre-tecnicas-de-imputacion-de-datos-con-python/)
+# 
+
+# ### 1.3. Distribucion de la variable objetivo
+
+plt.figure(figsize=(6, 4))
+sns.countplot(data=df, x='TARGET')
+plt.title('Distribución de Supervivencia')
+plt.xlabel('Supervivencia')
+plt.ylabel('Frecuencia')
+plt.grid(False)
+plt.show()
+
+# ### 1.4. Tratamiento de nulos mediante imputación
+
+imputer = KNNImputer(n_neighbors=5)
+df = pd.DataFrame(imputer.fit_transform(df), columns=df.columns)
+msno.matrix(df)
+
+# Observaciones:
+# 
+#  Uso de KNNInputer, la cual consiste en asignar a cada dato nulo un valor obtenido a partir de la información disponible de los 5 vecinos más cercanos o parecidos a este.
+# 
+# Referencias
+# 
+#  - [guia-sobre-tecnicas-de-imputacion-de-datos-con-python](https://cesarquezadab.com/2021/09/19/guia-sobre-tecnicas-de-imputacion-de-datos-con-python/)
+# 
+#  - [Impacto de estrategias](https://rephip.unr.edu.ar/server/api/core/bitstreams/b8e75f0e-1df0-462f-b309-43eeaf0fdcbc/content#:~:text=KNN%20es%20un%20m%C3%A9todo%20eficiente,este%20(donantes%20o%20vecinos).)
+# 
+#  - Documentación vista en clase (Clasificación_Titanic.ipynb)
+
+# ### 1.4. Outliers
+
+clf = LocalOutlierFactor(n_neighbors=20, contamination='auto')
+y_pred = clf.fit_predict(df)
+n_outliers = sum(y_pred==-1)
+n_total = len(y_pred)
+X_scores = clf.negative_outlier_factor_
+radius = (X_scores.max() - X_scores) / (X_scores.max() - X_scores.min())
+print(u'El número de outliers detectados es de {} de un total de {}'.format(n_outliers, n_total))
+
+# Referencias
+# 
+#  - [LocalOutlierFactor](https://scikit-learn.org/stable/auto_examples/neighbors/plot_lof_outlier_detection)
+
+# ### 1.5. Análisis de correlación
+
+matriz_correlaciones = df.corr()
+plt.figure(figsize=(20, 16))
+sns.heatmap(matriz_correlaciones, annot=True, fmt=".2f")
+plt.title('Matriz de Correlación')
+plt.show()
+
+# Observaciones:
+# 
+# Interpretación de colores: 
+#  - MB_TOTALES se mide en meses (correlación 1 respecto MB_MENSUALES)
+#  - Los usuarios que se crean recientemente una cuenta suelen estar muy activos
+#  - Cuantos más errores en el servicio(NUM_DIAS_BUNDLE), menos actividad (NUM_DIAS_ACTIVO)
+#  - [...]
+# 
+# Referencias:
+# 
+#  - Documentación vista en clase (Regresion_PrecioDiamantes.ipynb)
+# 
+#  - [Interpretación de correlación](https://www.cimec.es/coeficiente-correlacion-pearson/#:~:text=Un%20valor%20mayor%20que%200,una%20relaci%C3%B3n%20lineal%20positiva%20perfecta.)
 #  
-#  - [Evitar notación científica](https://es.stackoverflow.com/questions/533263/como-imprimir-cifras-completas-en-un-dataframe-que-no-aparezca-el)
+
+# ## 2. Preparación de los datos para el modelado
+
+# ### 2.1. Selección de variables de entrenamiento.
+
+x = df.drop(['TARGET', 'MES'], axis=1)
+y = df['TARGET']
+
+# ### 2.2. Estandarización
+
+scaler = StandardScaler()
+x_scaled = scaler.fit_transform(x)
+x_estandarizado = pd.DataFrame(x_scaled, columns=x.columns)
+x_estandarizado
+
+# ### 2.3. Division del dataset
+
+x_train, x_test, y_train, y_test = train_test_split(x_estandarizado, y, test_size=0.2, random_state=0)
+
+print(u'Dimensiones en train \n-x:{}\n-y:{}'.format(x_train.shape, y_train.shape))
+print(u'Dimensiones en test \n-x:{}\n-y:{}'.format(x_test.shape, y_test.shape))
+
+# ## 3. Comparación del rendimiento de varios modelos
+
+# ### 3.1. Regresión logística
+
+lr = LogisticRegression()
+lr.fit(x_train, y_train)
+y_test_pred_lr = lr.predict(x_test)
+y_test_prob_lr = lr.predict_proba(x_test)
+
+fpr, tpr, thrs = roc_curve(y_test, y_test_prob_lr[:, 1])
+plt.figure(figsize=(12,12))
+plt.plot(fpr, tpr)
+plt.plot([0, 1], [0, 1], "r--")
+plt.title("ROC")
+plt.xlabel("Falsos Positivos")
+plt.ylabel("Verdaderos Positivos")
+plt.show()
+
+auc = roc_auc_score(y_test, y_test_prob_lr[:, 1])
+print("- Precision:", round(precision_score(y_test, y_test_pred_lr),2))
+print("- Recall:", recall_score(y_test, y_test_pred_lr))
+print("- Fscore:", round(f1_score(y_test, y_test_pred_lr),2))
+print("- AUC:", round(auc,2))
+
+
+# ### 3.2. Modelo ensamblado
+
+# [Bagging](http://eio.usc.es/pub/mte/descargas/ProyectosFinMaster/Proyecto_1686.pdf)
+
+rfc = RandomForestClassifier()
+rfc.fit(x_train, y_train)
+y_test_pred_rfc = rfc.predict(x_test)
+y_test_prob_rfc = rfc.predict_proba(x_test)
+
+fpr, tpr, thrs = roc_curve(y_test, y_test_prob_rfc[:, 1])
+plt.figure(figsize=(12,12))
+plt.plot(fpr, tpr)
+plt.plot([0, 1], [0, 1], "r--")
+plt.title("ROC")
+plt.xlabel("Falsos Positivos")
+plt.ylabel("Verdaderos Positivos")
+plt.show()
+
+auc = roc_auc_score(y_test, y_test_prob_rfc[:, 1])
+print("- Precision:", round(precision_score(y_test, y_test_pred_rfc),2))
+print("- Recall:", recall_score(y_test, y_test_pred_rfc))
+print("- Fscore:", round(f1_score(y_test, y_test_pred_rfc),2))
+print("- AUC:", round(auc,2))
+
+
+# ### 3.3. Red neuronal (MLP)
+
+# ## 4. Segmentación de clientes
+
+km = KMeans(n_clusters=2, random_state=0)
+km = km.fit_predict(x_estandarizado)
+km
+
+rfc_cluster = LogisticRegression()
+rfc_cluster.fit
+
+# [KMeans clustering](https://www.kaggle.com/code/micheldc55/introduccion-al-clustering-con-python-y-sklearn)
 # 
-#  - [pandas.to_datetime](https://pandas.pydata.org/docs/reference/api/pandas.to_datetime.html)
+# [El algoritmo k-means](https://www.unioviedo.es/compnum/laboratorios_py/kmeans/kmeans)
+
+# ## 5. Tratamiento y análisis de la columna Mes.
+
+# Calculamos los cuantiles y el IQR
+Q1 = df['MES'].quantile(0.25)
+Q3 = df['MES'].quantile(0.75)
+IQR = Q3 - Q1
+
+# Calculamos los límites para identificar outliers
+lower_bound = Q1 - 1.5 * IQR
+upper_bound = Q3 + 1.5 * IQR
+
+# Identificamos outliers por encima y por debajo de los límites
+outliers_above = df['MES'][df['MES'] > upper_bound]
+outliers_below = df['MES'][df['MES'] < lower_bound]
+
+print("Número de outliers por encima:", outliers_above.shape[0])
+print("Número de outliers por debajo:", outliers_below.shape[0])
+
+# Boxplot vertical
+plt.figure(figsize=(4, 6))
+sns.boxplot(y=df['MES'], color='skyblue', orient='v')
+plt.ylabel('Precio')
+plt.title('Boxplot Y')
+plt.show()
+
+df['MES'] = pd.to_datetime(df['MES'], format='%Y%m')
+
+df['MES'].info()
+
+df['MES'].describe()
+
+# - [pandas.to_datetime](https://pandas.pydata.org/docs/reference/api/pandas.to_datetime.html)
 # 
+# - [Float Python](https://ellibrodepython.com/float-python)
+# 
+#  - Documentación vista en clase (Regresion_PrecioDiamantes.ipynb)
 
 
