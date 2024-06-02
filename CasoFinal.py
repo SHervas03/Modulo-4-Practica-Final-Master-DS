@@ -2,38 +2,64 @@
 # Modulo 4 - Máster Data Science y Business Analytics
 # Sergio Hervás Aragón
 
-# ### Importaciones
+# ### Librerías
 
+# Tratamiento de datos
+# ==============================================================================
+import numpy as np
 import pandas as pd
-import sys
 
-# ### Lectura de datos
+import matplotlib.pyplot as plt
 
-def read_csv(file):
+# Preprocesado
+# ==============================================================================
+from sklearn.impute import KNNImputer
+
+import missingno as msno # librería para tratamiento de datos perdidos
+
+# ### Carga de datos
+
+def read_csv(file, sep):
     # Declaración de una variable, la que se encargara de guardar nuestros registros
     df = []
     try:
         # Lectura de nuestro fichero
-        df = pd.read_csv(file, sep=';')
+        df = pd.read_csv(file, sep=sep)
     except FileNotFoundError:
         # Excepción en caso de no ser el archivo encontrado por la ruta ofrecida
-        print('Error: Archivo no encontrado')
-        # Finalizador de programa en caso de saltar la excepción
-        sys.exit(1)
-    except pd.errors.ParserError:
-        # Excepción en caso de tener mal indicado el separador a usar
-        print('Error: Archivo erroneamente parseado')
-        # Finalizador de programa en caso de saltar la excepción
-        sys.exit(1)
+        raise ValueError('Archivo no encontrado')
     except Exception as e:
         # Excepción genérica en caso de que haya otro problema
-        print(f'Error: {e}')
-        sys.exit(1)
+        raise ValueError(f'Error: {e}')
     finally:
         print('Proceso de lectura finalizado')
     return df
 
-# ### Analisis exploratorio
+# ### Descripción y Análisis
+
+def description_and_analysis(df):
+    print(f'\nDescripción de la tabla de la tabla:\n {df.describe()}')
+    print('\nInformación de la tabla de la tabla:\n ')
+    print(f'{df.info()}')
+    msno.matrix(df)
+    plt.title('Valores faltantes en cada columna')
+
+
+# ### Tratamiento de nulos mediante imputación
+
+def null_value_treatment(df):
+    # https://cesarquezadab.com/2021/09/19/guia-sobre-tecnicas-de-imputacion-de-datos-con-python/
+    # Documentación vista en clase (Clasificación_Titanic.ipynb)
+    imputer = KNNImputer(n_neighbors=5)
+    df = pd.DataFrame(imputer.fit_transform(df), columns=df.columns)
+
+# ### Outliers
+
+
+
+# ## Analisis exploratorio
+
+# ### Conteo de Nulos
 
 def count_off_nulls(df):
     print('\nConteo de nulos por columnas:')
@@ -53,41 +79,38 @@ def count_off_nulls(df):
     else:
         print(' - No hay nulos en el DataFrame')
 
+# ### Reemplazo de nulos por 0:
+# Tras la exploración de los datos con los que vamos a trabajar, al ser de tipo numérico, se opta por el reemplazo de estos por un valor numérico, de tal manera que no se borre ningún dato, pero que a su vez no cuente para el análisis
+
 def replace_null_with_zero(df):
     print('\nReemplazo de NULL´s por 0')
     # Reemplazo de valores nulos por 0
     df.fillna(0, inplace=True)
 
-def column_type_display(df):
-    print(f'\ndtypes de las columnas: \n{df.dtypes}')
+# ### Resumen estadístico de variables
 
-def column_parsing(df):
-    # pd.options.display.float_format = '{:.3f}'.format
-    for column in df.columns:
-        if df[column].dtypes == 'object':
-            try:
-                df[column] = df[column].astype('float64')
-            except ValueError:
-                df[column] = df[column].str.replace(',','')
-                try:
-                    df[column] = df[column].astype('float64')
-                except ValueError:
-                    df[column] = df[column].str.replace('.','')
-                    try:
-                        df[column] = df[column].astype('float64')
-                    except ValueError:
-                        print('Hay columnas que no pueden ser parseadas')
-    print("\nProceso de parseo finalizado")
+def variable_summary(df):
+    print(df.describe())
 
+# ### Transformación de datos de float a date
+# 
+# Tras la visualización de los datos, se opta por un parseo de la columna 'MES' a date para un mejor tratamiento de datos
+
+def parse_column_year(df):
+    df['MES'] = df['MES'].astype(str)
+    df['MES'] = pd.to_datetime(df['MES'], format='%Y%m')
+    return df
 
 if __name__ == "__main__":
-    df = read_csv('./caso_final_small_20k_con_mes.csv')
-    count_off_nulls(df)
-    replace_null_with_zero(df)
-    count_off_nulls(df)
-    column_type_display(df)
-    column_parsing(df)
-    column_type_display(df)
+    df = read_csv(file = './caso_final_small_20k_con_mes.csv', sep = ',')
+    description_and_analysis(df)
+    null_value_treatment(df)
+    # count_off_nulls(df)
+    # replace_null_with_zero(df)
+    # count_off_nulls(df)
+    # df = parse_column_year(df)
+    # column_type_display(df)
+    # variable_summary(df)
 
 
 # # Bibliografía
@@ -97,6 +120,8 @@ if __name__ == "__main__":
 #  - [Float Python](https://ellibrodepython.com/float-python)
 #  
 #  - [Evitar notación científica](https://es.stackoverflow.com/questions/533263/como-imprimir-cifras-completas-en-un-dataframe-que-no-aparezca-el)
+# 
+#  - [pandas.to_datetime](https://pandas.pydata.org/docs/reference/api/pandas.to_datetime.html)
 # 
 
 
