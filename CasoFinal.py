@@ -87,7 +87,7 @@ msno.matrix(df)
 
 # ### 1.4. Outliers
 
-clf = LocalOutlierFactor(n_neighbors=20, contamination='auto')
+clf = LocalOutlierFactor(n_neighbors=8, contamination='auto')
 y_pred = clf.fit_predict(df)
 n_outliers = sum(y_pred==-1)
 n_total = len(y_pred)
@@ -194,6 +194,26 @@ print("- AUC:", round(auc,2))
 
 
 # ### 3.3. Red neuronal (MLP)
+
+mlp = MLPClassifier()
+mlp.fit(x_train, y_train)
+y_test_pred_mlp = mlp.predict(x_test)
+y_test_prob_mlp = mlp.predict_proba(x_test)
+
+fpr, tpr, thrs = roc_curve(y_test, y_test_prob_mlp[:, 1])
+plt.figure(figsize=(12,12))
+plt.plot(fpr, tpr)
+plt.plot([0, 1], [0, 1], "r--")
+plt.title("ROC")
+plt.xlabel("Falsos Positivos")
+plt.ylabel("Verdaderos Positivos")
+plt.show()
+
+auc = roc_auc_score(y_test, y_test_prob_mlp[:, 1])
+print("- Precision:", round(precision_score(y_test, y_test_pred_mlp),2))
+print("- Recall:", recall_score(y_test, y_test_pred_mlp))
+print("- Fscore:", round(f1_score(y_test, y_test_pred_mlp),2))
+print("- AUC:", round(auc,2))
 
 # ## 4. Segmentación de clientes
 
