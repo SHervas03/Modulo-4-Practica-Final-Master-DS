@@ -250,6 +250,41 @@ for i, col in enumerate(columnas_numeric):
     axes[i].grid(False)
 plt.show()
 
+# df_outliers = df.select_dtypes(include=['float64', 'int64'])
+# outlier_indices_above = []
+# outlier_indices_below = []
+# for column in df_outliers.columns:
+#     Q1 = df[column].quantile(0.25)
+#     Q3 = df[column].quantile(0.75)
+#     IQR = Q3 - Q1
+    
+#     lower_bound = Q1 - 1.5 * IQR
+#     upper_bound = Q3 + 1.5 * IQR
+    
+#     outliers_above = df[column] > upper_bound
+#     outliers_below = df[column] < lower_bound
+
+#     total_muestras = len(df[column])
+#     outliers = outliers_above.sum() + outliers_below.sum()
+#     porcentaje_outliers = (outliers / total_muestras) * 100
+
+#     # print(f"Número total de muestras de {column}: {total_muestras}")
+#     # print(f"Número de outliers totales:\n{outliers}")
+#     # print(f"Porcentaje de outliers totales:\n{porcentaje_outliers:.2f} %")
+#     # print(f"---------------------------------------------------------")
+#     outlier_indices_above.extend(outliers_above[outliers_above].index)
+#     outlier_indices_below.extend(outliers_below[outliers_below].index)
+
+# outlier_indices_above = pd.DataFrame(outlier_indices_above, columns=['Index'])
+# outlier_indices_below = pd.DataFrame(outlier_indices_below, columns=['Index'])
+
+# outlier_indices = pd.concat([outlier_indices_above, outlier_indices_below], axis=0)
+# outlier_indices
+# # df = df.drop(index=outlier_indices['Index']).reset_index(drop=True)
+
+# # print(len(df))
+
+
 
 # df_outliers = df.select_dtypes(include=['float64', 'int64'])
 
@@ -274,14 +309,14 @@ plt.show()
 # print(f"Número de outliers totales:\n{outliers}")
 # print(f"Porcentaje de outliers totales:\n{porcentaje_outliers}")
 
-# outlier_indices_above = pd.DataFrame(outliers_above[outliers_above.sum(axis=1) > 0].index)
-# outlier_indices_below = pd.DataFrame(outliers_below[outliers_below.sum(axis=1) > 0].index)
+outlier_indices_above = pd.DataFrame(outliers_above[outliers_above.sum(axis=1) > 0].index)
+outlier_indices_below = pd.DataFrame(outliers_below[outliers_below.sum(axis=1) > 0].index)
 
-# outlier_indices = pd.concat([outlier_indices_above, outlier_indices_below], axis=1, ignore_index=True)
+outlier_indices = pd.concat([outlier_indices_above, outlier_indices_below], axis=1, ignore_index=True)
 
-# df = df.drop(index=outlier_indices).reset_index(drop=True)
+df = df.drop(index=outlier_indices).reset_index(drop=True)
 
-# print(len(df))
+print(len(df))
 
 # # Crear el modelo LOF
 # lof = LocalOutlierFactor(n_neighbors=20)
